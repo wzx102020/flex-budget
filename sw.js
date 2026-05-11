@@ -1,16 +1,18 @@
-const CACHE = 'flexbudget-v3';
-const FILES = [
-  '/app.html',
-  '/灵活记账.html',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png',
-  '/apple-touch-icon.png'
-];
+const CACHE = 'flexbudget-v4';
+const BASE = self.location.pathname.replace(/\/sw\.js$/, '');
 
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(FILES))
+    caches.open(CACHE).then(c =>
+      c.addAll([
+        BASE + '/',
+        BASE + '/index.html',
+        BASE + '/manifest.json',
+        BASE + '/icon-192.png',
+        BASE + '/icon-512.png',
+        BASE + '/apple-touch-icon.png'
+      ])
+    )
   );
   self.skipWaiting();
 });
@@ -35,9 +37,8 @@ self.addEventListener('fetch', e => {
         }
         return resp;
       }).catch(() => {
-        // 离线且无缓存时返回首页
         if (e.request.mode === 'navigate') {
-          return caches.match('/灵活记账.html');
+          return caches.match(BASE + '/index.html');
         }
       });
     })

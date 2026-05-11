@@ -7,9 +7,9 @@
 <meta name="apple-mobile-web-app-title" content="灵活记账">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0f0f1a">
-<link rel="manifest" href="/manifest.json">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
 <title>灵活记账</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -794,7 +794,7 @@ console.log('💰 灵活记账 v2 | 动态日预算 | 多账户管理');
 
 // ==================== PWA 离线支持 ====================
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('/sw.js').catch(()=>{});
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
 }
 
 // PWA 安装提示（首次访问延迟弹出）
