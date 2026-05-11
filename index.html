@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="灵活记账">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f0f1a">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+<title>灵活记账</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0f0f1a;--card:#1a1a2e;--card2:#16213e;
+  --primary:#e94560;--green:#0f9;--gold:#f0c040;--blue:#4da6ff;
+  --text:#e8e8e8;--muted:#889;--border:#2a2a40;--radius:14px;
+  --safe:env(safe-area-inset-bottom,12px);
+}
+body{
+  font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  background:var(--bg);color:var(--text);min-height:100vh;
+  padding-bottom:calc(100px + var(--safe));
+  -webkit-tap-highlight-color:transparent;
+}
+header{
+  background:var(--card2);padding:16px 20px;
+  padding-top:max(16px,env(safe-area-inset-top));
+  border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;
+}
+header h2{font-size:17px;margin-bottom:4px;}
+header .date-info{font-size:12px;color:var(--muted);}
+
+/* 总览条 */
+.summary-strip{
+  display:flex;margin:12px 16px;gap:10px;
+}
+.summary-item{
+  flex:1;background:var(--card);border-radius:var(--radius);padding:12px;
+  text-align:center;
+}
+.summary-val{font-size:20px;font-weight:800;}
+.summary-lbl{font-size:10px;color:var(--muted);margin-top:2px;}
+
+/* 账户卡片 */
+.account-card{
+  background:var(--card);border-radius:var(--radius);padding:14px;
+  margin:10px 16px;border:1px solid var(--border);
+}
+.acct-top{
+  display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;
+}
+.acct-left{display:flex;align-items:center;gap:10px;}
+.acct-icon{
+  width:40px;height:40px;border-radius:12px;display:flex;
+  align-items:center;justify-content:center;font-size:20px;
+}
+.acct-name{font-size:15px;font-weight:700;}
+.acct-mode{
+  font-size:10px;padding:3px 8px;border-radius:10px;
+  border:1px solid var(--border);
+}
+.acct-mode.dynamic{border-color:var(--green);color:var(--green);background:rgba(0,255,153,0.08);}
+.acct-mode.fixed{border-color:var(--muted);color:var(--muted);background:rgba(136,136,153,0.08);}
+.acct-actions{display:flex;gap:6px;}
+.acct-act-btn{
+  width:28px;height:28px;border-radius:50%;border:1px solid var(--border);
+  background:transparent;color:var(--muted);font-size:13px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+}
+.acct-act-btn:active{background:var(--primary);color:#fff;border-color:var(--primary);}
+
+.acct-stats{
+  display:flex;gap:12px;margin-bottom:8px;font-size:12px;
+}
+.acct-stat{flex:1;}
+.acct-stat-val{font-weight:700;font-size:16px;}
+.acct-stat-lbl{color:var(--muted);font-size:10px;}
+
+.acct-progress{
+  height:5px;background:var(--bg);border-radius:3px;overflow:hidden;margin-bottom:8px;
+}
+.acct-progress-bar{
+  height:100%;border-radius:3px;transition:width 0.4s;
+}
+
+/* 动态预算 - 未来几天预览 */
+.daily-forecast{
+  background:var(--bg);border-radius:10px;padding:10px 12px;
+  margin-top:8px;display:none;
+}
+.daily-forecast.show{display:block;}
+.forecast-title{
+  font-size:11px;color:var(--muted);margin-bottom:8px;
+  display:flex;justify-content:space-between;
+}
+.forecast-days{
+  display:flex;gap:4px;overflow-x:auto;padding-bottom:4px;
+}
+.forecast-day{
+  flex-shrink:0;width:38px;text-align:center;
+  background:var(--card);border-radius:8px;padding:6px 3px;
+  font-size:10px;
+}
+.forecast-day.today{border:1px solid var(--primary);}
+.forecast-date{color:var(--muted);margin-bottom:2px;}
+.forecast-amount{font-weight:700;font-size:11px;}
+
+/* 今日支出 */
+.today-section{margin:14px 16px;}
+.section-hd{
+  display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;
+}
+.section-ttl{font-size:13px;font-weight:600;color:var(--muted);letter-spacing:1px;}
+.expense-row{
+  display:flex;align-items:center;padding:10px 12px;
+  background:var(--card);border-radius:10px;margin-bottom:6px;gap:10px;
+}
+.exp-icon{
+  width:34px;height:34px;border-radius:10px;display:flex;
+  align-items:center;justify-content:center;font-size:16px;flex-shrink:0;
+}
+.exp-info{flex:1;min-width:0;}
+.exp-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.exp-meta{font-size:11px;color:var(--muted);}
+.exp-amount{font-size:14px;font-weight:700;color:var(--primary);}
+.exp-del{
+  width:24px;height:24px;border-radius:50%;border:none;
+  background:transparent;color:var(--muted);font-size:16px;cursor:pointer;
+}
+
+/* 按钮 */
+.fab{
+  position:fixed;bottom:calc(24px + var(--safe));right:20px;
+  width:56px;height:56px;border-radius:50%;border:none;
+  background:var(--primary);color:#fff;font-size:28px;
+  cursor:pointer;box-shadow:0 6px 20px rgba(233,69,96,0.4);
+  z-index:100;display:flex;align-items:center;justify-content:center;
+}
+.fab:active{transform:scale(0.95);}
+.bottom-bar{
+  position:fixed;bottom:0;left:0;right:0;background:var(--card);
+  border-top:1px solid var(--border);display:flex;
+  padding:8px 0;padding-bottom:calc(8px + var(--safe));z-index:99;
+}
+.nav-btn{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:6px 0;cursor:pointer;color:var(--muted);font-size:10px;
+  border:none;background:none;
+}
+.nav-btn.active{color:var(--primary);}
+.nav-btn .nav-ic{font-size:20px;}
+
+/* 模态 */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:200;
+  display:none;align-items:flex-end;justify-content:center;
+}
+.modal-overlay.show{display:flex;}
+.modal{
+  background:var(--card);border-radius:var(--radius) var(--radius) 0 0;
+  width:100%;max-width:500px;padding:20px;
+  animation:slideUp 0.25s ease;max-height:85vh;overflow-y:auto;
+}
+@keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+.modal-title{font-size:18px;font-weight:700;margin-bottom:16px;text-align:center;}
+.form-group{margin-bottom:14px;}
+.form-label{font-size:12px;color:var(--muted);margin-bottom:6px;display:block;}
+.form-input{
+  width:100%;padding:12px 14px;border-radius:10px;
+  border:1px solid var(--border);background:var(--bg);
+  color:var(--text);font-size:16px;outline:none;
+}
+.form-input:focus{border-color:var(--primary);}
+.chip-wrap{display:flex;flex-wrap:wrap;gap:8px;}
+.chip{
+  padding:8px 14px;border-radius:20px;border:1px solid var(--border);
+  background:var(--bg);color:var(--text);font-size:13px;cursor:pointer;
+}
+.chip.selected{border-color:var(--primary);background:rgba(233,69,96,0.15);color:var(--primary);}
+.btn-row{display:flex;gap:10px;margin-top:6px;}
+.btn{
+  flex:1;padding:14px;border-radius:12px;border:none;
+  font-size:15px;font-weight:600;cursor:pointer;
+}
+.btn-p{background:var(--primary);color:#fff;}
+.btn-s{background:var(--border);color:var(--text);}
+.btn:active{opacity:0.85;}
+
+.toggle-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:10px 14px;background:var(--bg);border-radius:10px;
+}
+.toggle-label{font-size:13px;}
+.toggle-desc{font-size:11px;color:var(--muted);}
+.toggle-switch{
+  width:48px;height:28px;border-radius:14px;border:none;
+  background:var(--border);cursor:pointer;position:relative;transition:background 0.2s;
+  flex-shrink:0;
+}
+.toggle-switch.on{background:var(--green);}
+.toggle-switch::after{
+  content:'';position:absolute;top:3px;left:3px;
+  width:22px;height:22px;border-radius:50%;background:#fff;transition:left 0.2s;
+}
+.toggle-switch.on::after{left:23px;}
+
+.empty-state{text-align:center;padding:40px 20px;color:var(--muted);}
+.empty-icon{font-size:48px;margin-bottom:12px;}
+.empty-text{font-size:13px;}
+
+input[type="date"]{
+  background:var(--bg);border:1px solid var(--border);color:var(--text);
+  padding:8px 12px;border-radius:8px;font-size:14px;
+}
+input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(1);}
+
+/* 切换动画 */
+@keyframes pop{0%{transform:scale(0.8);opacity:0}100%{transform:scale(1);opacity:1}}
+.pop{animation:pop 0.2s ease;}
+</style>
+</head>
+<body>
+
+<header>
+  <h2>💰 灵活记账</h2>
+  <div class="date-info" id="dateInfo"></div>
+</header>
+
+<!-- 总览条 -->
+<div class="summary-strip" id="summaryStrip"></div>
+
+<!-- 账户卡片列表 -->
+<div id="accountCards"></div>
+
+<!-- 今日支出 -->
+<div class="today-section">
+  <div class="section-hd">
+    <span class="section-ttl">📅 今日支出</span>
+    <span style="font-size:12px;color:var(--primary)" id="todayTotal"></span>
+  </div>
+  <div id="todayExpenses">
+    <div class="empty-state"><div class="empty-icon">📝</div><div class="empty-text">今天还没花钱</div></div>
+  </div>
+</div>
+
+<!-- 历史明细区 -->
+<div class="today-section" id="historySection" style="display:none">
+  <div class="section-hd">
+    <span class="section-ttl">📋 明细</span>
+    <input type="date" id="historyDate" onchange="renderHistory()">
+  </div>
+  <div id="historyList"></div>
+</div>
+
+<!-- FAB -->
+<button class="fab" onclick="showExpenseModal()">+</button>
+
+<!-- 底部导航 -->
+<div class="bottom-bar">
+  <button class="nav-btn active" id="navMain" onclick="switchTab('main')">
+    <span class="nav-ic">🏠</span>概览
+  </button>
+  <button class="nav-btn" id="navHistory" onclick="switchTab('history')">
+    <span class="nav-ic">📋</span>明细
+  </button>
+  <button class="nav-btn" id="navAccounts" onclick="switchTab('accounts')">
+    <span class="nav-ic">📂</span>账户
+  </button>
+</div>
+
+<!-- 记一笔弹窗 -->
+<div class="modal-overlay" id="modalExpense">
+  <div class="modal">
+    <div class="modal-title">记一笔</div>
+    <div class="form-group">
+      <label class="form-label">金额 ¥</label>
+      <input class="form-input" type="number" id="expAmount" placeholder="0.00" step="0.01" min="0.01">
+    </div>
+    <div class="form-group">
+      <label class="form-label">备注</label>
+      <input class="form-input" type="text" id="expNote" placeholder="买了什么...">
+    </div>
+    <div class="form-group">
+      <label class="form-label">归属账户</label>
+      <div class="chip-wrap" id="expAccountChips"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">日期</label>
+      <input class="form-input" type="date" id="expDate">
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-s" onclick="closeModal('modalExpense')">取消</button>
+      <button class="btn btn-p" onclick="addExpense()">确认</button>
+    </div>
+  </div>
+</div>
+
+<!-- 账户编辑弹窗 -->
+<div class="modal-overlay" id="modalAccount">
+  <div class="modal">
+    <div class="modal-title" id="acctModalTitle">新建账户</div>
+    <div class="form-group">
+      <label class="form-label">账户名称</label>
+      <input class="form-input" type="text" id="acctName" placeholder="如：吃喝账户">
+    </div>
+    <div class="form-group">
+      <label class="form-label">图标</label>
+      <div class="chip-wrap" id="acctIconPicker"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">月度预算 ¥</label>
+      <input class="form-input" type="number" id="acctBudget" placeholder="0" step="1">
+    </div>
+    <div class="form-group">
+      <label class="form-label">颜色</label>
+      <div class="chip-wrap" id="acctColorPicker"></div>
+    </div>
+    <div class="form-group">
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">动态预算</div>
+          <div class="toggle-desc">每天重新计算日预算</div>
+        </div>
+        <button class="toggle-switch" id="acctDynamicToggle" onclick="toggleDynamic()"></button>
+      </div>
+    </div>
+    <input type="hidden" id="acctEditId">
+    <div class="btn-row">
+      <button class="btn btn-s" onclick="closeModal('modalAccount')">取消</button>
+      <button class="btn btn-p" id="acctSaveBtn" onclick="saveAccount()">创建</button>
+    </div>
+    <div class="btn-row" id="acctDeleteRow" style="display:none">
+      <button class="btn btn-s" style="color:var(--primary)" onclick="deleteAccount()">删除账户</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==================== 数据 ====================
+const STORAGE_KEY = 'flex_budget_v2';
+const ICONS = ['🍚','🐶','📈','🚗','🛒','💊','🎮','📚','☕','🎬','👗','🏠','💡','🎁','✈','🏥','💻','🎵'];
+const COLORS = ['#e94560','#0f9','#f0c040','#4da6ff','#ff884d','#a78bfa','#34d399','#f472b6','#38bdf8'];
+
+function loadData(){
+  try{ const r = localStorage.getItem(STORAGE_KEY); if(r) return JSON.parse(r); }catch(e){}
+  return getDefault();
+}
+function getDefault(){
+  return {
+    accounts: [
+      {id:'a1',name:'吃喝',icon:'🍚',color:'#e94560',budget:450,dynamic:true},
+      {id:'a2',name:'宠物进货',icon:'🐶',color:'#0f9',budget:2000,dynamic:false},
+      {id:'a3',name:'娱乐',icon:'🎬',color:'#f0c040',budget:300,dynamic:false},
+    ],
+    expenses: []
+  };
+}
+function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA)); }
+let DATA = loadData();
+
+// ==================== 核心计算 ====================
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+function daysInMonth(y,m){
+  return new Date(y, m+1, 0).getDate();
+}
+
+function remainingDaysInMonth(){
+  const now = new Date();
+  const total = daysInMonth(now.getFullYear(), now.getMonth());
+  return total - now.getDate() + 1; // 包括今天
+}
+
+function calcAccount(acct){
+  const now = new Date();
+  const ym = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  // 本月该账户的支出
+  const monthExp = DATA.expenses.filter(ex => {
+    if(ex.accountId !== acct.id) return false;
+    const d = new Date(ex.date);
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  });
+  const spent = monthExp.reduce((s,ex)=>s+ex.amount, 0);
+  const remaining = Math.max(0, acct.budget - spent);
+  const remDays = remainingDaysInMonth();
+  const dailyBudget = acct.dynamic ? (remDays > 0 ? remaining / remDays : 0) : null;
+  const baseDaily = acct.dynamic ? (acct.budget / daysInMonth(now.getFullYear(), now.getMonth())) : null;
+  const percent = acct.budget > 0 ? (spent / acct.budget) * 100 : 0;
+
+  // 未来几天预算预测
+  let forecast = [];
+  if(acct.dynamic){
+    let bal = remaining;
+    for(let i=0; i<Math.min(7, remDays); i++){
+      const d = new Date(now);
+      d.setDate(d.getDate() + i);
+      const daysLeft = remDays - i;
+      const dayBudget = daysLeft > 0 ? bal / daysLeft : 0;
+      forecast.push({
+        date: (d.getMonth()+1)+'/'+d.getDate(),
+        isToday: i===0,
+        budget: dayBudget
+      });
+      // 模拟：假设每天刚好花掉预算
+      bal -= dayBudget;
+    }
+  }
+
+  return {spent, remaining, remDays, dailyBudget, baseDaily, percent, forecast};
+}
+
+// ==================== 渲染 ====================
+let currentTab = 'main';
+
+function switchTab(tab){
+  currentTab = tab;
+  document.getElementById('navMain').classList.toggle('active', tab==='main');
+  document.getElementById('navHistory').classList.toggle('active', tab==='history');
+  document.getElementById('navAccounts').classList.toggle('active', tab==='accounts');
+  document.getElementById('historySection').style.display = tab==='history' ? '' : 'none';
+  if(tab==='history') renderHistory();
+  if(tab==='accounts') renderAccountsView();
+  renderAll();
+}
+
+function renderAll(){
+  const now = new Date();
+  document.getElementById('dateInfo').textContent =
+    '今天 ' + (now.getMonth()+1)+'月'+now.getDate()+'日 · ' +
+    '本月剩 ' + remainingDaysInMonth() + ' 天 · ' +
+    '共 ' + daysInMonth(now.getFullYear(), now.getMonth()) + ' 天';
+
+  // 总览条
+  const totalBudget = DATA.accounts.reduce((s,a)=>s+a.budget, 0);
+  const totalSpent = DATA.accounts.reduce((s,a)=>s+calcAccount(a).spent, 0);
+  const totalRem = Math.max(0, totalBudget - totalSpent);
+  document.getElementById('summaryStrip').innerHTML =
+    `<div class="summary-item">
+      <div class="summary-val">¥${totalBudget}</div>
+      <div class="summary-lbl">总预算</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-val" style="color:var(--green)">¥${totalRem.toFixed(0)}</div>
+      <div class="summary-lbl">总剩余</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-val" style="color:var(--primary)">¥${totalSpent.toFixed(0)}</div>
+      <div class="summary-lbl">已花</div>
+    </div>`;
+
+  // 账户卡片
+  document.getElementById('accountCards').innerHTML = DATA.accounts.map(a => {
+    const c = calcAccount(a);
+    const barColor = c.percent > 80 ? 'var(--primary)' : c.percent > 50 ? 'var(--gold)' : 'var(--green)';
+    return `<div class="account-card">
+      <div class="acct-top">
+        <div class="acct-left">
+          <div class="acct-icon" style="background:${a.color}22;color:${a.color}">${a.icon}</div>
+          <div>
+            <div class="acct-name">${escHtml(a.name)}</div>
+          </div>
+        </div>
+        <div class="acct-actions">
+          <span class="acct-mode ${a.dynamic?'dynamic':'fixed'}">${a.dynamic?'🔄 动态':'📌 固定'}</span>
+          <button class="acct-act-btn" onclick="event.stopPropagation();quickExpense('${a.id}')" title="快捷记一笔">+</button>
+          <button class="acct-act-btn" onclick="event.stopPropagation();editAccount('${a.id}')">✎</button>
+        </div>
+      </div>
+      <div class="acct-stats">
+        <div class="acct-stat">
+          <div class="acct-stat-val">¥${c.remaining.toFixed(0)}</div>
+          <div class="acct-stat-lbl">剩余</div>
+        </div>
+        <div class="acct-stat">
+          <div class="acct-stat-val" style="color:var(--primary)">¥${c.spent.toFixed(0)}</div>
+          <div class="acct-stat-lbl">已花</div>
+        </div>
+        <div class="acct-stat">
+          <div class="acct-stat-val">¥${a.budget}</div>
+          <div class="acct-stat-lbl">月预算</div>
+        </div>
+        ${a.dynamic ? `
+        <div class="acct-stat">
+          <div class="acct-stat-val" style="color:var(--blue)">¥${c.dailyBudget.toFixed(2)}</div>
+          <div class="acct-stat-lbl">今日可用</div>
+        </div>` : ''}
+      </div>
+      <div class="acct-progress">
+        <div class="acct-progress-bar" style="width:${Math.min(100,c.percent)}%;background:${barColor}"></div>
+      </div>
+      ${a.dynamic ? `
+      <div class="daily-forecast show">
+        <div class="forecast-title">
+          <span>📊 未来每天预算预览</span>
+          <span style="font-size:10px">剩余${c.remDays}天</span>
+        </div>
+        <div class="forecast-days">
+          ${c.forecast.map((f,i) =>
+            `<div class="forecast-day${f.isToday?' today':''}">
+              <div class="forecast-date">${f.isToday?'今天':f.date}</div>
+              <div class="forecast-amount">¥${f.budget.toFixed(1)}</div>
+            </div>`
+          ).join('')}
+        </div>
+      </div>` : ''}
+    </div>`;
+  }).join('') || '<div class="empty-state"><div class="empty-icon">📂</div><div class="empty-text">还没有账户<br>点底部"账户"创建</div></div>';
+
+  // 今日支出
+  const today = todayStr();
+  const todayExp = DATA.expenses.filter(ex => ex.date === today).sort((a,b) => b.time - a.time);
+  const todayTotal = todayExp.reduce((s,ex)=>s+ex.amount,0);
+  document.getElementById('todayTotal').textContent = todayExp.length > 0 ? '合计 ¥'+todayTotal.toFixed(2) : '';
+  const tec = document.getElementById('todayExpenses');
+  if(todayExp.length === 0){
+    tec.innerHTML = '<div class="empty-state"><div class="empty-icon">📝</div><div class="empty-text">今天还没花钱</div></div>';
+  } else {
+    tec.innerHTML = todayExp.map(ex => {
+      const acct = DATA.accounts.find(a => a.id === ex.accountId) || {};
+      return `<div class="expense-row pop">
+        <div class="exp-icon" style="background:${acct.color||'#333'}22;color:${acct.color||'#fff'}">${acct.icon||'💰'}</div>
+        <div class="exp-info">
+          <div class="exp-name">${escHtml(ex.note||'未备注')}</div>
+          <div class="exp-meta">${acct.name||''} · ${formatTime(ex.time)}</div>
+        </div>
+        <div class="exp-amount" onclick="inlineEditAmount('${ex.id}',this,event)">-¥${ex.amount.toFixed(2)}</div>
+        <button class="exp-del" onclick="delExpense('${ex.id}')">×</button>
+      </div>`;
+    }).join('');
+  }
+}
+
+function renderHistory(){
+  const ds = document.getElementById('historyDate')?.value || todayStr();
+  const dayExp = DATA.expenses.filter(ex => ex.date === ds).sort((a,b) => b.time - a.time);
+  const total = dayExp.reduce((s,ex)=>s+ex.amount,0);
+  document.getElementById('historyList').innerHTML =
+    `<div style="margin-bottom:10px;font-size:13px;font-weight:600">${ds} 支出 ¥${total.toFixed(2)}</div>` +
+    (dayExp.length===0
+      ? '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">这天没有记录</div></div>'
+      : dayExp.map(ex => {
+        const acct = DATA.accounts.find(a => a.id === ex.accountId) || {};
+        return `<div class="expense-row">
+          <div class="exp-icon" style="background:${acct.color||'#333'}22;color:${acct.color||'#fff'}">${acct.icon||'💰'}</div>
+          <div class="exp-info">
+            <div class="exp-name">${escHtml(ex.note||'未备注')}</div>
+            <div class="exp-meta">${acct.name||''} · ${formatTime(ex.time)}</div>
+          </div>
+          <div class="exp-amount" onclick="inlineEditAmount('${ex.id}',this,event)">-¥${ex.amount.toFixed(2)}</div>
+          <button class="exp-del" onclick="delExpense('${ex.id}')">×</button>
+        </div>`;
+      }).join(''));
+}
+
+function renderAccountsView(){
+  // 复用 accountCards 区域显示管理模式
+  document.getElementById('accountCards').innerHTML = DATA.accounts.map(a => {
+    const c = calcAccount(a);
+    return `<div class="account-card" onclick="editAccount('${a.id}')">
+      <div class="acct-top">
+        <div class="acct-left">
+          <div class="acct-icon" style="background:${a.color}22;color:${a.color}">${a.icon}</div>
+          <div>
+            <div class="acct-name">${escHtml(a.name)}</div>
+            <div style="font-size:11px;color:var(--muted)">月预算 ¥${a.budget} · ${a.dynamic?'🔄动态':'📌固定'}</div>
+          </div>
+        </div>
+        <div style="color:var(--muted);font-size:20px">›</div>
+      </div>
+    </div>`;
+  }).join('') || '<div class="empty-state"><div class="empty-icon">📂</div><div class="empty-text">还没有账户</div></div>';
+  document.getElementById('accountCards').innerHTML +=
+    '<div style="margin:10px 16px"><button class="btn btn-s" style="width:100%" onclick="showAccountModal()">+ 新建账户</button></div>';
+}
+
+// ==================== 操作 ====================
+let selExpAccount = null;
+
+function quickExpense(acctId){
+  selExpAccount = acctId;
+  document.getElementById('expAmount').value = '';
+  document.getElementById('expNote').value = '';
+  document.getElementById('expDate').value = todayStr();
+  renderExpAccountChips();
+  openModal('modalExpense');
+  setTimeout(()=>document.getElementById('expAmount').focus(), 300);
+}
+
+function showExpenseModal(){
+  selExpAccount = DATA.accounts.length>0 ? DATA.accounts[0].id : null;
+  document.getElementById('expAmount').value = '';
+  document.getElementById('expNote').value = '';
+  document.getElementById('expDate').value = todayStr();
+  renderExpAccountChips();
+  openModal('modalExpense');
+  setTimeout(()=>document.getElementById('expAmount').focus(), 300);
+}
+
+function renderExpAccountChips(){
+  document.getElementById('expAccountChips').innerHTML = DATA.accounts.map(a =>
+    `<span class="chip${a.id===selExpAccount?' selected':''}"
+          style="background:${a.color}15;border-color:${a.id===selExpAccount?a.color:'var(--border)'}"
+          onclick="selExpAccount='${a.id}';renderExpAccountChips();">
+       ${a.icon} ${escHtml(a.name)}
+    </span>`
+  ).join('');
+}
+
+function addExpense(){
+  const amt = parseFloat(document.getElementById('expAmount').value);
+  if(!amt||amt<=0){alert('请输入有效金额');return;}
+  if(!selExpAccount){alert('请选择账户');return;}
+
+  DATA.expenses.push({
+    id:'e'+Date.now(),
+    amount: Math.round(amt*100)/100,
+    note: document.getElementById('expNote').value.trim()||'未备注',
+    accountId: selExpAccount,
+    date: document.getElementById('expDate').value || todayStr(),
+    time: Date.now()
+  });
+  // 检查切换月份
+  checkMonth();
+  save();
+  closeModal('modalExpense');
+  renderAll();
+}
+
+function delExpense(id){
+  if(!confirm('删除这条记录？'))return;
+  DATA.expenses = DATA.expenses.filter(ex=>ex.id!==id);
+  save();
+  renderAll();
+}
+
+function inlineEditAmount(id, el, ev){
+  if(!ev) ev = window.event;
+  if(ev) ev.stopPropagation();
+  if(el.querySelector('input')) return;
+  var ex = DATA.expenses.find(function(e){ return e.id === id; });
+  if(!ex) return;
+  var origAmt = ex.amount;
+  el.innerHTML = '<input type="number" value="'+origAmt+'" step="0.01" min="0.01" style="width:80px;padding:4px 6px;border-radius:6px;border:1px solid var(--primary);background:var(--bg);color:var(--text);font-size:13px;text-align:right;">';
+  var inp = el.querySelector('input');
+  inp.focus();
+  inp.select();
+  inp.addEventListener('blur', function(){
+    var v = parseFloat(inp.value);
+    if(v && v > 0 && v !== origAmt){
+      ex.amount = Math.round(v*100)/100;
+      save();
+      renderAll();
+    } else {
+      el.innerHTML = '-¥' + origAmt.toFixed(2);
+    }
+  });
+  inp.addEventListener('keydown', function(e){
+    if(e.key === 'Enter') inp.blur();
+  });
+}
+
+// ==================== 账户 CRUD ====================
+let editAcctDynamic = false;
+let editPickedIcon = ICONS[0];
+let editPickedColor = COLORS[0];
+
+function showAccountModal(editId){
+  const exist = editId ? DATA.accounts.find(a=>a.id===editId) : null;
+  document.getElementById('acctModalTitle').textContent = exist ? '编辑账户' : '新建账户';
+  document.getElementById('acctName').value = exist?.name || '';
+  document.getElementById('acctBudget').value = exist?.budget || '';
+  document.getElementById('acctEditId').value = editId || '';
+  document.getElementById('acctSaveBtn').textContent = exist ? '保存' : '创建';
+  document.getElementById('acctDeleteRow').style.display = exist ? '' : 'none';
+  editAcctDynamic = exist ? exist.dynamic : false;
+  editPickedIcon = exist?.icon || ICONS[0];
+  editPickedColor = exist?.color || COLORS[0];
+  updateDynamicToggle();
+
+  document.getElementById('acctIconPicker').innerHTML = ICONS.map(ic =>
+    `<span class="chip${ic===editPickedIcon?' selected':''}" onclick="editPickedIcon='${ic}';showAccountModal(undefined);refreshAcctModal()">${ic}</span>`
+  ).join('');
+  document.getElementById('acctColorPicker').innerHTML = COLORS.map(c =>
+    `<span class="chip${c===editPickedColor?' selected':''}" style="background:${c}22" onclick="editPickedColor='${c}';refreshAcctModal()">
+       <span style="display:inline-block;width:16px;height:16px;border-radius:50%;background:${c}"></span>
+    </span>`
+  ).join('');
+
+  openModal('modalAccount');
+}
+
+function refreshAcctModal(){
+  document.getElementById('acctIconPicker').innerHTML = ICONS.map(ic =>
+    `<span class="chip${ic===editPickedIcon?' selected':''}" onclick="editPickedIcon='${ic}';refreshAcctModal()">${ic}</span>`
+  ).join('');
+  document.getElementById('acctColorPicker').innerHTML = COLORS.map(c =>
+    `<span class="chip${c===editPickedColor?' selected':''}" style="background:${c}22" onclick="editPickedColor='${c}';refreshAcctModal()">
+       <span style="display:inline-block;width:16px;height:16px;border-radius:50%;background:${c}"></span>
+    </span>`
+  ).join('');
+}
+
+function toggleDynamic(){
+  editAcctDynamic = !editAcctDynamic;
+  updateDynamicToggle();
+}
+
+function updateDynamicToggle(){
+  const btn = document.getElementById('acctDynamicToggle');
+  btn.className = 'toggle-switch' + (editAcctDynamic ? ' on' : '');
+}
+
+function saveAccount(){
+  const name = document.getElementById('acctName').value.trim();
+  if(!name){alert('请输入账户名称');return;}
+  const budget = parseInt(document.getElementById('acctBudget').value)||0;
+  const editId = document.getElementById('acctEditId').value;
+
+  if(editId){
+    const idx = DATA.accounts.findIndex(a=>a.id===editId);
+    if(idx>=0){
+      DATA.accounts[idx].name = name;
+      DATA.accounts[idx].icon = editPickedIcon;
+      DATA.accounts[idx].color = editPickedColor;
+      DATA.accounts[idx].budget = budget;
+      DATA.accounts[idx].dynamic = editAcctDynamic;
+    }
+  } else {
+    DATA.accounts.push({
+      id:'a'+Date.now(),
+      name, icon: editPickedIcon, color: editPickedColor,
+      budget, dynamic: editAcctDynamic
+    });
+  }
+  save();
+  closeModal('modalAccount');
+  renderAll();
+}
+
+function editAccount(id){
+  const a = DATA.accounts.find(ac=>ac.id===id);
+  if(a){
+    editPickedIcon = a.icon;
+    editPickedColor = a.color;
+  }
+  showAccountModal(id);
+}
+
+function deleteAccount(){
+  const id = document.getElementById('acctEditId').value;
+  if(!confirm('确定删除这个账户？该账户下的支出记录不会被删除，但会失去归属。'))return;
+  DATA.accounts = DATA.accounts.filter(a=>a.id!==id);
+  save();
+  closeModal('modalAccount');
+  renderAll();
+}
+
+// ==================== 月份检查 ====================
+function checkMonth(){
+  const now = new Date();
+  const stored = localStorage.getItem('flex_budget_last_month');
+  const current = now.getFullYear()+'-'+now.getMonth();
+  if(stored !== current){
+    // 新月，可选择是否清空
+    localStorage.setItem('flex_budget_last_month', current);
+  }
+}
+
+// ==================== 弹窗 ====================
+function openModal(id){ document.getElementById(id).classList.add('show'); }
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+document.querySelectorAll('.modal-overlay').forEach(ov=>{
+  ov.addEventListener('click',function(e){if(e.target===this)this.classList.remove('show');});
+});
+
+// ==================== 工具 ====================
+function escHtml(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+function formatTime(ts){
+  const d=new Date(ts);
+  return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+
+// ==================== 初始化 ====================
+document.getElementById('historyDate').value = todayStr();
+checkMonth();
+renderAll();
+console.log('💰 灵活记账 v2 | 动态日预算 | 多账户管理');
+
+// ==================== PWA 离线支持 ====================
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/sw.js').catch(()=>{});
+}
+
+// PWA 安装提示（首次访问延迟弹出）
+let installPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  installPrompt = e;
+  setTimeout(() => {
+    if(installPrompt && confirm('📱 添加到主屏幕，像App一样使用？')){
+      installPrompt.prompt();
+    }
+  }, 3000);
+});
+</script>
+</body>
+</html>
